@@ -8,18 +8,20 @@ YT Tutorial on how to set it up and use it. (WIP)
 
 ## Features
 
-- **Customisable Workspace:** Build an unlimited array of trigger buttons and faders on a free-form, scalable UI canvas.
+- **Customisable Workspace:** Build an unlimited array of buttons and faders on a free-form, scalable UI canvas.
 - **RC-505mk2-Specific design:** Buttons for the Infinite FX changes technique, general MIDI messages, or [MIDI program changes](https://www.youtube.com/watch?v=67y-oijQv1A)
 - **Save & Load Templates:** Share templates with your friends and load them up whenever you want.
 - **Responsive & Smart UI:**
+  - Toggle between "Edit" and "Perform" mode. Prevents accidental changes while live performing.
   - Fully resizable window with intelligent coordinate scaling.
-  - A smooth **Grid Lock** system with instant "Snap-All" capability.
+  - A smooth free positioning / grid system with instant "Snap-All" capability.
   - Rubber-band multi-select and group dragging.
 - **Aesthetic Customization:** 
-  - Complete "Dark mode" & "Light mode"
+  - Dark mode & Light mode
   - Custom user-imported background images.
-  - Native OS Color Pickers for every widget, combined with a "Glow Intensity" shader system for live visual trigger feedback.
-- **MIDI Clock Quantization:** Sequence your macros! Delay a trigger impact until the "Next Beat" or "Next Bar", or quantize to stay perfectly in time with the mk2's internal clock.
+  - Native OS Color Pickers for every widget, combined with a 
+  - "Glow Intensity" system for live visual trigger feedback.
+- **MIDI Clock Quantization:** Delay a trigger impact until the "Next Beat" or "Next Bar", or quantize to stay perfectly in time with the mk2's internal clock.
 
 ## Installation
 
@@ -29,14 +31,19 @@ You can download the installers from the **[Releases](https://github.com/JMakesM
 | Device | File to Download |
 | :--- | :--- |
 | **Windows PC** | `LPL505_x64-setup.exe` (Recommended) or `.msi` |
-| **Mac (M1 / M2 / M3)** | `LPL505_aarch64.dmg` |
+| **Mac (M series chips)** | `LPL505_aarch64.dmg` |
 | **Mac (Intel / Older)** | `LPL505_x64.dmg` |
 | **Linux (Ubuntu / Debian)** | `LPL505_amd64.deb` |
 | **Linux (Fedora / RedHat)** | `LPL505_x86_64.rpm` |
 | **Linux (General)** | `LPL505_amd64.AppImage` |
 
-> [!TIP]
-> **Mac Users:** You may need to right-click the app and select **"Open"** the very first time you run it to bypass the security warning.
+> [!IMPORTANT]
+>Since this project is independent and open-source, your operating system may flag the app as unverified. Dont worry, the code is fully transparent and viewable right here on GitHub.
+>**Windows Users** If you recieve a "Windows protected your PC" popup, click **"More info"** and then **"Run anyway"**.
+>**Mac Users:** If you get a "damaged" or "developer cannot be verified" error, open your Terminal and run the following command to allow the app to run:
+> ```markdown
+>sudo xattr -cr /Applications/Launchpadless505.app
+> ```
 
 ### 2. Install MK2 Presets (Required)
 This app works specifically with a Boss RC-505mk2 connected via USB. You **must** install the provided `.RC0` memory files to your loop station for the app markers to function correctly.
@@ -74,3 +81,9 @@ npm run tauri build
 
 Developed by [@jmakesmusicx](https://www.youtube.com/@JMakesMusicx).
 If you found this software useful for your looping performances, consider tossing a tip to my **[Ko-fi page](https://ko-fi.com/jmakesmusicx)**!
+
+## Disclaimer
+
+**Launchpadless505** is an independent, open-source community project. It is **not** affiliated with, authorized, maintained, sponsored, or endorsed by **BOSS**, **Roland**, or **Novation**.
+All product and company names are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them. 
+This tool is provided "as-is" for the purpose of extending hardware functionality and does not contain or distribute any proprietary software or copyrighted code belonging to the aforementioned companies.
