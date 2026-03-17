@@ -115,7 +115,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ element, updateElement, onDel
       <div className="input-group">
         <label>Text Size ({el.fontSize || (el.type === 'fader' ? 0.85 : 1)}rem)</label>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input type="range" min="0.4" max="2.5" step="0.05" value={el.fontSize || (el.type === 'fader' ? 0.85 : 1)}
+          <input type="range" min="0.4" max="5" step="0.05" value={el.fontSize || (el.type === 'fader' ? 0.85 : 1)}
             onChange={e => set({ fontSize: parseFloat(e.target.value) })}
             style={{ flex: 1, accentColor: 'var(--accent-base)' }}
           />
