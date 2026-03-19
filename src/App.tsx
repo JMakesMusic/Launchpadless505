@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
-import { Play, Edit3, Plus, Undo2, Redo2, Music2, X, Settings, Save, FolderOpen, SlidersHorizontal, Zap, ExternalLink, Image, Sun, Moon, Grid, Magnet, RefreshCw, Bookmark, FilePlus } from 'lucide-react';
+import { Play, Edit3, Plus, Undo2, Redo2, Music2, X, Settings, Save, FolderOpen, SlidersHorizontal, Zap, ExternalLink, Image, Sun, Moon, Grid, Magnet, RefreshCw, Bookmark, FilePlus, Download } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open, message } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { useMidi, MidiDevice } from './MidiContext';
 import { CanvasElement } from './types';
 import ButtonCanvas, { ThemeStyle } from './ButtonCanvas';
@@ -111,6 +113,13 @@ function App() {
   const [showCornerGlow, setShowCornerGlow] = useState(() => loadSavedOption('showCornerGlow', true));
   const [animateCornerGlow, setAnimateCornerGlow] = useState(() => loadSavedOption('animateCornerGlow', false));
 
+  // ─── Auto-Update ────────────────────────────────────────────────────
+  const [autoUpdate, setAutoUpdate] = useState(() => loadSavedOption('autoUpdate', true));
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error'>('idle');
+  const [updateVersion, setUpdateVersion] = useState('');
+  const [updateProgress, setUpdateProgress] = useState(0);
+  const [updateError, setUpdateError] = useState('');
+
   // Auto-save session elements
   useEffect(() => {
     if (!showBootPrompt) {
@@ -137,10 +146,11 @@ function App() {
       localStorage.setItem('505fx_gridSize', JSON.stringify(gridSize));
       localStorage.setItem('505fx_showCornerGlow', JSON.stringify(showCornerGlow));
       localStorage.setItem('505fx_animateCornerGlow', JSON.stringify(animateCornerGlow));
+      localStorage.setItem('505fx_autoUpdate', JSON.stringify(autoUpdate));
     } catch (e) {
       console.error('Failed to save settings to localStorage (possibly quota exceeded):', e);
     }
-  }, [modeToggleKey, theme, colorMode, accentColor, bgImage, bgBlur, bgOpacity, glowAmount, snapToGrid, gridSize, showCornerGlow, animateCornerGlow]);
+  }, [modeToggleKey, theme, colorMode, accentColor, bgImage, bgBlur, bgOpacity, glowAmount, snapToGrid, gridSize, showCornerGlow, animateCornerGlow, autoUpdate]);
 
   const resetTheme = () => {
     setTheme('filled');
@@ -155,6 +165,72 @@ function App() {
     setShowCornerGlow(true);
     setAnimateCornerGlow(false);
   };
+
+  // ─── Update Logic ──────────────────────────────────────────────────
+  const checkForUpdates = useCallback(async (silent = false) => {
+    try {
+      setUpdateStatus('checking');
+      setUpdateError('');
+      const update = await check();
+      if (update) {
+        setUpdateVersion(update.version);
+        setUpdateStatus('available');
+      } else {
+        setUpdateStatus('idle');
+        if (!silent) {
+          await message('You are running the latest version.', { title: 'No Updates', kind: 'info' });
+        }
+      }
+    } catch (e: any) {
+      console.error('Update check failed:', e);
+      setUpdateStatus('error');
+      setUpdateError(String(e?.message || e));
+      if (!silent) {
+        await message(`Failed to check for updates: ${e?.message || e}`, { title: 'Update Error', kind: 'error' });
+      }
+    }
+  }, []);
+
+  const installUpdate = useCallback(async () => {
+    try {
+      setUpdateStatus('downloading');
+      setUpdateProgress(0);
+      const update = await check();
+      if (!update) return;
+
+      let downloaded = 0;
+      let contentLength = 1;
+      await update.downloadAndInstall((event) => {
+        switch (event.event) {
+          case 'Started':
+            contentLength = event.data.contentLength ?? 1;
+            break;
+          case 'Progress':
+            downloaded += event.data.chunkLength;
+            setUpdateProgress(Math.min(100, Math.round((downloaded / contentLength) * 100)));
+            break;
+          case 'Finished':
+            setUpdateProgress(100);
+            break;
+        }
+      });
+
+      setUpdateStatus('ready');
+      await relaunch();
+    } catch (e: any) {
+      console.error('Update install failed:', e);
+      setUpdateStatus('error');
+      setUpdateError(String(e?.message || e));
+    }
+  }, []);
+
+  // Auto-check on startup
+  useEffect(() => {
+    if (autoUpdate) {
+      const timeout = setTimeout(() => checkForUpdates(true), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply dark/light mode to document
   useEffect(() => {
@@ -761,6 +837,59 @@ function App() {
                 <RefreshCw size={14} style={{ marginRight: 6 }} /> Reset Visuals to Default
               </button>
             </div>
+
+            <div className="modal-divider" />
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: -4 }}>Updates</div>
+
+            <div className="input-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem' }}>
+                <input type="checkbox" checked={autoUpdate} onChange={e => setAutoUpdate(e.target.checked)} style={{ accentColor: 'var(--accent-base)' }} />
+                Check for updates automatically on launch
+              </label>
+            </div>
+
+            <div className="input-group">
+              <button
+                className="btn"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => checkForUpdates(false)}
+                disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+              >
+                {updateStatus === 'checking' ? (
+                  <><RefreshCw size={14} className="spin" style={{ marginRight: 6 }} /> Checking...</>
+                ) : (
+                  <><Download size={14} style={{ marginRight: 6 }} /> Check for Updates</>
+                )}
+              </button>
+
+              {updateStatus === 'available' && (
+                <div style={{ marginTop: 12, padding: 12, background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid var(--accent-base)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>
+                    🎉 Update v{updateVersion} available!
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '10px 16px' }} onClick={installUpdate}>
+                    <Download size={14} style={{ marginRight: 6 }} /> Download & Install
+                  </button>
+                </div>
+              )}
+
+              {updateStatus === 'downloading' && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                    Downloading update... {updateProgress}%
+                  </div>
+                  <div style={{ width: '100%', height: 6, background: 'var(--bg-panel)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${updateProgress}%`, height: '100%', background: 'var(--accent-base)', borderRadius: 3, transition: 'width 0.2s ease' }} />
+                  </div>
+                </div>
+              )}
+
+              {updateStatus === 'error' && (
+                <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--danger)' }}>
+                  {updateError}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -817,7 +946,7 @@ function App() {
               </button>
 
               <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>
-                Build v1.0.0-beta.1
+                Build v1.1.0-2
               </div>
             </div>
           </div>
